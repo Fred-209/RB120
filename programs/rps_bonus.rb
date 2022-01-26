@@ -1,50 +1,25 @@
-=begin
-Add some features to the RPS program in the previous assignment. 
-- Keep score
-  - first to 10 wins?
-- Add Lizard and Spock move options
-- Add a class for each move
-- Keep track of a history of moves
-- create some computer personalities
-
-
-*Keeping Score*
-- score would be a number
-- fits as a state of a Player object
-- common to all players
-- needs to be incremented when a player wins
-- initially is set to 0 on creation of a Player object
-- needs a getter and a setter
-- winner is determined by a score reaching 3 for any player
-  - will do best out of 3
-  - each playthrough is called a round
-  - flow should be:
-    - each player makes a move
-    - winner of these two moves is determined - determine_round_winner
-      - this is the round winner
-    - score instance variable of player who won the round is incremented by one
-    - before game loop restarts, check to see if any player has a score of 3 or more
-      - determine_overall_winner
-      - if so, this is the game winner.
-        - congratulate winner
-        - ask if want to play again
-    
-=end
-
-require 'pry'
-
-
+# RPSLS Bonus Features - Launch School
 
 class Player
-  attr_accessor :move, :name, :score
+  attr_accessor :name, :move, :move_history, :score
 
   def initialize
     @score = 0
+    @move_history = []
     set_name
   end
 
   def increment_score!
     self.score += 1
+  end
+
+  def display_move_history
+    print "#{name}'s history of move choices: "
+    puts move_history.map(&:capitalize).join(', ')
+  end
+
+  def update_move_history!(choice)
+    move_history << choice
   end
 end
 
@@ -69,8 +44,8 @@ class Human < Player
       puts 'That is not a valid choice. Please choose again.'
     end
     self.move = Move.convert_to_class[choice.to_sym].new
+    update_move_history!(choice)
     puts "#{name} chose #{move.value}!"
-
   end
 end
 
@@ -82,17 +57,16 @@ class Computer < Player
   def choose
     choice = Move::VALUES.sample
     self.move = Move.convert_to_class[choice.to_sym].new
+    update_move_history!(choice)
     puts "#{name} chose #{move.value}!"
   end
 end
 
-
 class Move
-  
   VALUES = %w[rock paper scissors lizard spock]
 
   attr_reader :wins_against_list, :value
-  
+
   def initialize(value)
     @value = value
   end
@@ -110,15 +84,16 @@ class Move
   end
 
   def self.convert_to_class
-    { rock:     Rock,
-      paper:    Paper,
+    {
+      rock: Rock,
+      paper: Paper,
       scissors: Scissors,
-      lizard:   Lizard,
-      spock:    Spock
+      lizard: Lizard,
+      spock: Spock
     }
   end
-end 
-  
+end
+
 class Paper < Move
   def initialize
     @value = 'paper'
@@ -165,7 +140,7 @@ class RPSGame
   end
 
   def clear_screen
-    system("clear")
+    system('clear')
   end
 
   def display_welcome_message
@@ -178,7 +153,6 @@ class RPSGame
     computer.choose
   end
 
-  
   def display_moves
     puts "#{human.name} chose #{human.move}"
     puts "#{computer.name} chose #{computer.move}."
@@ -188,12 +162,12 @@ class RPSGame
     round_winner = nil
 
     if human.move > computer.move
-      round_winner = human.name
-      human.increment_score!
+      round_winner = human
     elsif human.move < computer.move
-      round_winner = computer.name
-      computer.increment_score!
+      round_winner = computer
     end
+
+    round_winner&.increment_score!
 
     increment_rounds_played!
     display_round_winner(round_winner)
@@ -204,8 +178,11 @@ class RPSGame
   end
 
   def display_round_winner(winner)
+    human.display_move_history
+    computer.display_move_history
+
     if winner
-      puts "#{winner} won this round!"
+      puts "#{winner.name} won this round!"
     else
       puts "It's a tie. Noone wins this round!"
     end
@@ -217,7 +194,6 @@ class RPSGame
     human.score >= 3 || computer.score >= 3
   end
 
-
   def display_score
     puts "#{human.name} has a score of #{human.score}"
     puts "#{computer.name} has a score of #{computer.score}"
@@ -228,9 +204,10 @@ class RPSGame
     puts "Congratulations #{overall_winner.name}! You win the game!"
   end
 
-  def reset_game
+  def reset_game!
     [human, computer].each do |player|
       player.score = 0
+      player.move_history.clear
     end
     self.rounds_played = 0
   end
@@ -251,8 +228,6 @@ class RPSGame
     puts 'Thanks for playing Rock, Paper, Scissors. Goodbye!'
   end
 
-  
-
   def play
     loop do
       players_choose_moves
@@ -260,7 +235,7 @@ class RPSGame
       next unless overall_game_winner?
       display_score
       congratulate_winner
-      reset_game
+      reset_game!
       break unless play_again?
     end
     display_goodbye_message
