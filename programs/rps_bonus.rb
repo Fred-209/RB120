@@ -1,7 +1,8 @@
 # RPSLS Bonus Features - Launch School
 
 class Player
-  attr_accessor :name, :move, :move_history, :score
+  attr_reader :name, :score
+  attr_accessor :move
 
   def initialize
     @score = 0
@@ -21,6 +22,20 @@ class Player
   def update_move_history!(choice)
     move_history << choice
   end
+
+  def reset_score
+    self.score = 0
+  end
+  
+  def clear_move_history
+    self.move_history.clear
+  end
+
+  private
+
+  attr_accessor :move_history
+  attr_writer :name, :score
+
 end
 
 class Human < Player
@@ -65,7 +80,7 @@ end
 class Move
   VALUES = %w[rock paper scissors lizard spock]
 
-  attr_reader :wins_against_list, :value
+  attr_reader :value
 
   def initialize(value)
     @value = value
@@ -92,6 +107,10 @@ class Move
       spock: Spock
     }
   end
+
+  protected
+
+  attr_reader :wins_against_list
 end
 
 class Paper < Move
@@ -130,14 +149,30 @@ class Spock < Move
 end
 
 class RPSGame
-  attr_accessor :human, :computer, :rounds_played
-
+  
   def initialize
     display_welcome_message
     @human = Human.new
     @computer = Computer.new
     @rounds_played = 0
   end
+
+  def play
+    loop do
+      players_choose_moves
+      determine_round_winner
+      next unless overall_game_winner?
+      display_score
+      congratulate_winner
+      reset_game!
+      break unless play_again?
+    end
+    display_goodbye_message
+  end
+
+  private 
+
+  attr_accessor :human, :computer, :rounds_played
 
   def clear_screen
     system('clear')
@@ -206,8 +241,8 @@ class RPSGame
 
   def reset_game!
     [human, computer].each do |player|
-      player.score = 0
-      player.move_history.clear
+      player.reset_score
+      player.clear_move_history
     end
     self.rounds_played = 0
   end
@@ -228,18 +263,7 @@ class RPSGame
     puts 'Thanks for playing Rock, Paper, Scissors. Goodbye!'
   end
 
-  def play
-    loop do
-      players_choose_moves
-      determine_round_winner
-      next unless overall_game_winner?
-      display_score
-      congratulate_winner
-      reset_game!
-      break unless play_again?
-    end
-    display_goodbye_message
-  end
+  
 end
 
 RPSGame.new.play
