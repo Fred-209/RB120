@@ -1,4 +1,12 @@
 # RPSLS Bonus Features - Launch School
+=begin
+- add in attack types for each Move subclass
+- for each other 'weapon' that a weapon 'beats' , there are different keywords for this
+- for instance: rock CRUSHES scissors and OBLITERATES scissors
+- this should be determined when determine who won
+=end
+require 'yaml'
+require 'colorize'
 
 class Player
   attr_reader :name, :score
@@ -51,13 +59,8 @@ class Human < Player
   end
 
   def choose
-    choice = nil
-    loop do
-      puts 'Please choose rock, paper, scissors, lizard, or spock:'
-      choice = gets.chomp
-      break if Move::VALUES.include?(choice)
-      puts 'That is not a valid choice. Please choose again.'
-    end
+    puts "Please choose rock, paper, scissors, lizard, or spock: "
+    choice = RPSGame.get_validated_input(Move::VALUES)
     self.move = Move.convert_to_class[choice.to_sym].new
     update_move_history!(choice)
     puts "#{name} chose #{move.value}!"
@@ -94,6 +97,11 @@ class Move
     other_move.wins_against_list.include?(value)
   end
 
+  def display_attack_style(other_move)
+    puts "#{value.capitalize} #{attack_style[other_move.value.to_sym]} " \
+          "#{other_move.value.capitalize}!!!"
+  end
+
   def to_s
     @value
   end
@@ -110,13 +118,17 @@ class Move
 
   protected
 
-  attr_reader :wins_against_list
+  attr_reader :wins_against_list, :attack_style
 end
 
 class Paper < Move
   def initialize
     @value = 'paper'
     @wins_against_list = %w[rock spock]
+    @attack_style = {
+      rock: 'COVERS'.colorize(:light_yellow),
+      spock: 'DISPROVES'.colorize(:light_magenta)
+    }
   end
 end
 
@@ -124,6 +136,10 @@ class Rock < Move
   def initialize
     @value = 'rock'
     @wins_against_list = %w[scissors lizard]
+    @attack_style = {
+      lizard: 'CRUSHES'.colorize(:light_yellow),
+      scissors: 'OBLITERATES'.colorize(:magenta)
+    }
   end
 end
 
@@ -131,6 +147,10 @@ class Scissors < Move
   def initialize
     @value = 'scissors'
     @wins_against_list = %w[paper lizard]
+    @attack_style = {
+      paper: 'CUTS'.colorize(:light_red),
+      lizard: 'DECAPITATES'.colorize(:red)
+    }
   end
 end
 
@@ -138,6 +158,10 @@ class Lizard < Move
   def initialize
     @value = 'lizard'
     @wins_against_list = %w[spock paper]
+    @attack_style = {
+      spock: 'POISONS'.colorize(:green),
+      paper: 'EATS'.colorize(:light_white)
+    }
   end
 end
 
@@ -145,11 +169,17 @@ class Spock < Move
   def initialize
     @value = 'spock'
     @wins_against_list = %w[scissors rock]
+    @attack_style = {
+      rock: 'VAPORIZES'.colorize(:cyan),
+      scissors: 'SMASHES'.colorize(:yellow)
+    }
   end
 end
 
 class RPSGame
   
+  DISPLAY_MESSAGES = YAML.load_file('rpsls.yml')
+
   def initialize
     display_welcome_message
     @human = Human.new
@@ -170,6 +200,21 @@ class RPSGame
     display_goodbye_message
   end
 
+  def self.get_validated_input(valid_input_list=nil)
+    if valid_input_list
+      user_input = ''
+      loop do 
+        user_input = gets.chomp.strip
+        break if valid_input_list.include?(user_input)
+        puts "That's not a valid entry. Try again."
+        print "Valid choices are [#{valid_input_list.join(', ')}] "
+      end
+    else
+      user_input = gets.chomp.strip
+    end
+    user_input
+  end
+
   private 
 
   attr_accessor :human, :computer, :rounds_played
@@ -180,7 +225,8 @@ class RPSGame
 
   def display_welcome_message
     clear_screen
-    puts 'Welcome to Rock, Paper, Scissors!'
+    puts DISPLAY_MESSAGES['intro_graphic'].colorize(:cyan)
+    puts DISPLAY_MESSAGES['intro_text']
   end
 
   def players_choose_moves
@@ -198,10 +244,12 @@ class RPSGame
 
     if human.move > computer.move
       round_winner = human
+      human.move.display_attack_style(computer.move)
     elsif human.move < computer.move
       round_winner = computer
+      computer.move.display_attack_style(human.move)
     end
-
+    
     round_winner&.increment_score!
 
     increment_rounds_played!
@@ -213,6 +261,7 @@ class RPSGame
   end
 
   def display_round_winner(winner)
+    
     human.display_move_history
     computer.display_move_history
 
@@ -260,9 +309,10 @@ class RPSGame
   end
 
   def display_goodbye_message
-    puts 'Thanks for playing Rock, Paper, Scissors. Goodbye!'
+    puts DISPLAY_MESSAGES['outro'].colorize(:light_cyan)
   end
 
+  
   
 end
 
