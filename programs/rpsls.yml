@@ -24,15 +24,16 @@ intro_graphic: |+
 
 intro_text: |+
 
-  Are you ready to test your worth in a fight to the death?
-  Well that's NOT what you're getting here.
-  This is just a simple game of "Rock Paper Scissors Lizard Spock"
-  You'll test your ability to out-random a bunch of 1's and 0's
-  named JerryBot. 
+  This is the classic game of "Rock, Paper, Scissors" but with the addition of 
+  two additional move choices : Lizard and Spock. This was popularized by the 
+  television show "The Big Bank Theory". 
+  You'll be challenging one of 5 possible computer opponents, and each has their
+  own personality and level of difficulty. 
+  
 
   The rules are simple. You choose either:
-  Rock, Paper, Scissors, Lizard, or Spock as your weapon.
-  Then JerryBot will choose as well.
+   Rock, Paper, Scissors, Lizard, or Spock as your move choice.
+  Then the computer will choose their own move
 
   The winner is determined based on the following: 
   
@@ -42,7 +43,7 @@ intro_text: |+
   Lizard wins against Spock and Paper
   Spock wins against Rock and Scissors
 
-  Win a round against JerryBot and you win a point. 
+  Win a round against the computer opponent and you win a point. 
   First one to 3 points is declared Grand Champion!
   Good Luck!
 
