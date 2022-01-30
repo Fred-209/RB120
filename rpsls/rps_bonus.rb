@@ -7,6 +7,7 @@
 =end
 require 'yaml'
 require 'colorize'
+require 'abbrev'
 
 class Player
   attr_reader :name, :score
@@ -59,8 +60,16 @@ class Human < Player
   end
 
   def choose
+    choice = nil
     puts "Please choose rock, paper, scissors, lizard, or spock: "
-    choice = RPSGame.get_validated_input(Move::VALUES)
+    loop do 
+      choice = gets.chomp.downcase
+      break if Move::ABBREVIATIONS.has_key?(choice)
+      puts "That is not a valid choice."
+      print "Please choose either Rock, Paper, Scissors, Lizard, or Spock: "
+    end
+    # choice = RPSGame.get_validated_input(Move::VALUES)
+    choice = Move::ABBREVIATIONS[choice].to_sym
     self.move = Move.convert_to_class[choice.to_sym].new
     update_move_history!(choice)
     puts "#{name} chose #{move.value}!"
@@ -73,8 +82,8 @@ class Computer < Player
   end
 
   def choose
-    choice = Move::VALUES.sample
-    self.move = Move.convert_to_class[choice.to_sym].new
+    choice = Move::VALUES.sample.to_sym
+    self.move = Move.convert_to_class[choice].new
     update_move_history!(choice)
     puts "#{name} chose #{move.value}!"
   end
@@ -82,6 +91,7 @@ end
 
 class Move
   VALUES = %w[rock paper scissors lizard spock]
+  ABBREVIATIONS = Abbrev.abbrev(VALUES)
 
   attr_reader :value
 
@@ -199,22 +209,7 @@ class RPSGame
     end
     display_goodbye_message
   end
-
-  def self.get_validated_input(valid_input_list=nil)
-    if valid_input_list
-      user_input = ''
-      loop do 
-        user_input = gets.chomp.strip
-        break if valid_input_list.include?(user_input)
-        puts "That's not a valid entry. Try again."
-        print "Valid choices are [#{valid_input_list.join(', ')}] "
-      end
-    else
-      user_input = gets.chomp.strip
-    end
-    user_input
-  end
-
+  
   private 
 
   attr_accessor :human, :computer, :rounds_played
