@@ -337,7 +337,7 @@ class RPSGame
       puts "You must choose 'y' or 'n'. Try again."
     end
 
-    'y yes'.include?(choice.downcase)
+    %w[y yes].include?(choice.downcase)
   end
 
   def display_title_graphic
