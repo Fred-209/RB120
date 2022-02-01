@@ -1,4 +1,4 @@
-intro_graphic: |+
+title_graphic: |+
 
   ██████╗░░█████╗░░█████╗░██╗░░██╗  ██████╗░░█████╗░██████╗░███████╗██████╗░  
   ██╔══██╗██╔══██╗██╔══██╗██║░██╔╝  ██╔══██╗██╔══██╗██╔══██╗██╔════╝██╔══██╗  
@@ -26,13 +26,13 @@ intro_text: |+
 
   This is the classic game of "Rock, Paper, Scissors" but with the addition of 
   two additional move choices : Lizard and Spock. This was popularized by the 
-  television show "The Big Bank Theory". 
+  television show "The Big Bang Theory". 
   You'll be challenging one of 5 possible computer opponents, and each has their
   own personality and level of difficulty. 
   
 
   The rules are simple. You choose either:
-   Rock, Paper, Scissors, Lizard, or Spock as your move choice.
+  Rock, Paper, Scissors, Lizard, or Spock as your move choice.
   Then the computer will choose their own move
 
   The winner is determined based on the following: 
@@ -44,8 +44,16 @@ intro_text: |+
   Spock wins against Rock and Scissors
 
   Win a round against the computer opponent and you win a point. 
-  First one to 3 points is declared Grand Champion!
+  First one to 3 points is declared the overall winner!
   Good Luck!
+
+
+
+stats_banner: |+
+  ******************************************************************************
+   %{human_stats}                                                             
+   %{computer_stats}                                                          
+  ****************************************************************************** 
 
 outro: |+
 

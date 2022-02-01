@@ -1,91 +1,127 @@
 # RPSLS Bonus Features - Launch School
-=begin
-- add in attack types for each Move subclass
-- for each other 'weapon' that a weapon 'beats' , there are different keywords for this
-- for instance: rock CRUSHES scissors and OBLITERATES scissors
-- this should be determined when determine who won
-=end
+
 require 'yaml'
 require 'colorize'
 require 'abbrev'
 
+DISPLAY_MESSAGES = YAML.load_file('rpsls.yml')
+WINNING_SCORE = 3
+PROMPT = ' => '
+
+COLORS = %i[
+  light_black
+  red
+  light_red
+  green
+  light_green
+  yellow
+  light_yellow
+  light_blue
+  magenta
+  light_magenta
+  cyan
+  light_cyan
+  default
+]
+
 class Player
-  attr_reader :name, :score
+  attr_reader :name, :score, :move_history
   attr_accessor :move
 
   def initialize
     @score = 0
     @move_history = []
-    set_name
+    @name = set_name!
   end
 
   def increment_score!
     self.score += 1
   end
 
-  def display_move_history
-    print "#{name}'s history of move choices: "
-    puts move_history.map(&:capitalize).join(', ')
-  end
-
   def update_move_history!(choice)
     move_history << choice
   end
 
-  def reset_score
+  def reset_score!
     self.score = 0
   end
-  
-  def clear_move_history
-    self.move_history.clear
+
+  def clear_move_history!
+    move_history.clear
+  end
+
+  def formatted_move_history
+    move_history.map(&:capitalize).join(', ')
+  end
+
+  def to_s
+    points = 'Points Scored:'.colorize(:green)
+    moves = 'Moves:'.colorize(:light_cyan)
+    "#{colored_name} -- #{points} #{score} #{moves} #{formatted_move_history}"
+  end
+
+  def colored_name
+    name.colorize(:yellow)
   end
 
   private
 
-  attr_accessor :move_history
-  attr_writer :name, :score
+  def set_name!
+    nil
+  end
 
+  attr_writer :name, :score, :move_history
 end
 
 class Human < Player
-  def set_name
+  def choose_move
+    choice = Move::ABBREVIATIONS[move_choice_input]
+    self.move = Move.convert_to_class[choice.to_sym].new
+    update_move_history!(choice)
+    puts
+    puts "#{name} chose #{move.value.capitalize}!"
+  end
+
+  private
+
+  def set_name!
     player_name = nil
     loop do
-      puts "What's your name? "
+      print "What's your name?#{PROMPT}"
       player_name = gets.chomp
       break unless player_name.strip.empty?
-      puts 'Sorry, name cannot be empty.'
+      puts "Your name can't be blank. Enter it again#{PROMPT}"
     end
+    puts "Hello, #{player_name}!"
     self.name = player_name
   end
 
-  def choose
+  def move_choice_input
     choice = nil
-    puts "Please choose rock, paper, scissors, lizard, or spock: "
-    loop do 
+    puts 'What do you choose as your move this round?'
+    print "Choices are Rock, Paper, Scissors, Lizard, or Spock:#{PROMPT}"
+    loop do
       choice = gets.chomp.downcase
-      break if Move::ABBREVIATIONS.has_key?(choice)
-      puts "That is not a valid choice."
-      print "Please choose either Rock, Paper, Scissors, Lizard, or Spock: "
+      break if Move::ABBREVIATIONS.key?(choice)
+      puts 'That is not a valid choice. Try again'
+      print "Please choose Rock, Paper, Scissors, Lizard, or Spock:#{PROMPT}"
     end
-    # choice = RPSGame.get_validated_input(Move::VALUES)
-    choice = Move::ABBREVIATIONS[choice].to_sym
-    self.move = Move.convert_to_class[choice.to_sym].new
-    update_move_history!(choice)
-    puts "#{name} chose #{move.value}!"
+    choice
   end
 end
 
 class Computer < Player
-  def set_name
-    self.name = %w[R2D2 Hal Chappie Sonny Number_5].sample
-  end
-
-  def choose
+  def choose_move
     choice = Move::VALUES.sample.to_sym
     self.move = Move.convert_to_class[choice].new
     update_move_history!(choice)
-    puts "#{name} chose #{move.value}!"
+    puts "#{name} chose #{move.value.capitalize}!"
+  end
+
+  private
+
+  def set_name!
+    self.name = %w[R2D2 Hal Chappie Sonny Number_5].sample
   end
 end
 
@@ -109,7 +145,7 @@ class Move
 
   def display_attack_style(other_move)
     puts "#{value.capitalize} #{attack_style[other_move.value.to_sym]} " \
-          "#{other_move.value.capitalize}!!!"
+           "#{other_move.value.capitalize}!!!"
   end
 
   def to_s
@@ -187,13 +223,11 @@ class Spock < Move
 end
 
 class RPSGame
-  
-  DISPLAY_MESSAGES = YAML.load_file('rpsls.yml')
-
   def initialize
     display_welcome_message
     @human = Human.new
     @computer = Computer.new
+    @round_winner = nil
     @rounds_played = 0
   end
 
@@ -201,18 +235,18 @@ class RPSGame
     loop do
       players_choose_moves
       determine_round_winner
+      update_game!
       next unless overall_game_winner?
-      display_score
       congratulate_winner
       reset_game!
       break unless play_again?
     end
     display_goodbye_message
   end
-  
-  private 
 
-  attr_accessor :human, :computer, :rounds_played
+  private
+
+  attr_accessor :human, :computer, :rounds_played, :round_winner
 
   def clear_screen
     system('clear')
@@ -220,95 +254,112 @@ class RPSGame
 
   def display_welcome_message
     clear_screen
-    puts DISPLAY_MESSAGES['intro_graphic'].colorize(:cyan)
-    puts DISPLAY_MESSAGES['intro_text']
+    display_title_graphic
+    display_intro_text
   end
 
   def players_choose_moves
-    human.choose
-    computer.choose
-  end
-
-  def display_moves
-    puts "#{human.name} chose #{human.move}"
-    puts "#{computer.name} chose #{computer.move}."
+    clear_screen
+    display_title_graphic
+    display_stats_banner
+    human.choose_move
+    computer.choose_move
   end
 
   def determine_round_winner
-    round_winner = nil
+    human_move = human.move
+    computer_move = computer.move
 
-    if human.move > computer.move
-      round_winner = human
-      human.move.display_attack_style(computer.move)
-    elsif human.move < computer.move
-      round_winner = computer
-      computer.move.display_attack_style(human.move)
+    if human_move > computer_move
+      self.round_winner = human
+      human_move.display_attack_style(computer_move)
+    elsif human_move < computer_move
+      self.round_winner = computer
+      computer_move.display_attack_style(human_move)
     end
-    
-    round_winner&.increment_score!
+  end
 
+  def update_game!
     increment_rounds_played!
-    display_round_winner(round_winner)
+    round_winner&.increment_score!
+    display_round_winner
+    self.round_winner = nil
   end
 
   def increment_rounds_played!
     self.rounds_played += 1
   end
 
-  def display_round_winner(winner)
-    
-    human.display_move_history
-    computer.display_move_history
-
-    if winner
-      puts "#{winner.name} won this round!"
+  def display_round_winner
+    puts
+    if round_winner
+      puts "#{round_winner.name} won this round!"
     else
       puts "It's a tie. Noone wins this round!"
     end
     puts "There have been #{rounds_played} rounds played so far."
+    puts 'Press enter to continue...'
     gets
   end
 
   def overall_game_winner?
-    human.score >= 3 || computer.score >= 3
-  end
-
-  def display_score
-    puts "#{human.name} has a score of #{human.score}"
-    puts "#{computer.name} has a score of #{computer.score}"
+    human.score >= WINNING_SCORE || computer.score >= WINNING_SCORE
   end
 
   def congratulate_winner
     overall_winner = [human, computer].max_by(&:score)
-    puts "Congratulations #{overall_winner.name}! You win the game!"
+    color_congrats =
+      %w[C o n g r a t u l a t i o n s].map do |letter|
+        letter.colorize(COLORS.sample)
+      end.join
+    clear_screen
+    display_title_graphic
+    display_stats_banner
+    puts "#{color_congrats} #{overall_winner.name}! You win the game!"
   end
 
   def reset_game!
     [human, computer].each do |player|
-      player.reset_score
-      player.clear_move_history
+      player.reset_score!
+      player.clear_move_history!
     end
+    self.round_winner = nil
     self.rounds_played = 0
   end
 
   def play_again?
+    valid_choices = /^(y|n|yes|no)$/i
     choice = nil
     loop do
-      puts 'Would you like to play again? (y/n)'
+      print "Would you like to play again? (y/n)#{PROMPT}"
       choice = gets.chomp
-      break if %w[y n].include?(choice.downcase)
+      break if valid_choices.match?(choice.downcase)
       puts "You must choose 'y' or 'n'. Try again."
     end
 
-    choice == 'y'
+    'y yes'.include?(choice.downcase)
+  end
+
+  def display_title_graphic
+    puts DISPLAY_MESSAGES['title_graphic'].colorize(:light_cyan)
+  end
+
+  def display_intro_text
+    puts DISPLAY_MESSAGES['intro_text']
+  end
+
+  def display_stats_banner
+    puts format(
+      DISPLAY_MESSAGES['stats_banner'],
+      human_stats: human.to_s.center(120),
+      computer_stats: computer.to_s.center(120)
+    )
   end
 
   def display_goodbye_message
+    clear_screen
     puts DISPLAY_MESSAGES['outro'].colorize(:light_cyan)
   end
-
-  
-  
 end
 
 RPSGame.new.play
