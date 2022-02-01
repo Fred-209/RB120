@@ -50,19 +50,13 @@ class Player
     move_history.clear
   end
 
-  def formatted_move_history
-    move_history.map(&:capitalize).join(', ')
-  end
-
   def to_s
     points = 'Points Scored:'.colorize(:green)
     moves = 'Moves:'.colorize(:light_cyan)
     "#{colored_name} -- #{points} #{score} #{moves} #{formatted_move_history}"
   end
 
-  def colored_name
-    name.colorize(:yellow)
-  end
+  
 
   private
 
@@ -70,6 +64,14 @@ class Player
     nil
   end
 
+  def colored_name
+    name.colorize(:yellow)
+  end
+
+  def formatted_move_history
+    move_history.map(&:capitalize).join(', ')
+  end
+  
   attr_writer :name, :score, :move_history
 end
 
