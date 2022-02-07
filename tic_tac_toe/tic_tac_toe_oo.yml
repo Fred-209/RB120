@@ -49,3 +49,21 @@ available_symbol_markers: |+
   Some symbols may have already been chosen by another player.
   The available symbols are: [%s]
 
+
+pick_opponent: |+
+  
+  You chose to manually pick your opponent.
+  The computer opponents have different levels of difficulty.
+  Bobby is the easiest, Maude and Hans are medium difficulty,
+  and Ryuk and Player 456 are the strongest.
+  Who do you choose?
+  Your options are: [%s]
+
+turn_order_choices: |+
+  Do you want to keep the default turn order, or change it?
+  Make your choice from the menu below:
+  
+  1. Keep the default turn order.
+  2. Shuffle the turn order randomly.
+  3. Choose who goes first.
+  

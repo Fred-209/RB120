@@ -131,42 +131,27 @@ PLUS_MARKER = [
 COMPUTER_OPPONENTS = {
   Bobby: {
     name: 'Bobby',
-    colors: {
-      name_color: :light_green,
-      symbol_color: :light_green
-    },
+    color: :light_green,
     difficulty: 1
   },
   Maude: {
     name: 'Maude',
-    colors: {
-      name_color: :light_magenta,
-      symbol_color: :light_magenta
-    },
+    color: :light_magenta,
     difficulty: 2
   },
   Hans: {
     name: 'Hans',
-    colors: {
-      name_color: :light_cyan,
-      symbol_color: :light_cyan
-    },
+    color: :light_cyan,
     difficulty: 2
   },
   Ryuk: {
     name: 'Ryuk',
-    colors: {
-      name_color: :light_yellow,
-      symbol_color: :light_yellow
-    },
+    color: :light_yellow,
     difficulty: 3
   },
   Player_456: {
     name: 'Player_456',
-    colors: {
-      name_color: :light_white,
-      symbol_color: :light_white
-    },
+    color: :light_white,
     difficulty: 3
   }
 }
@@ -179,7 +164,29 @@ SYMBOL_MARKERS_MAP = {
   'plus_sign' => PLUS_MARKER
 }
 
-module TTTUtils
+module TTTUtils # requires colorize gem 
+
+  def build_regexp_pattern(string_array, abbreviations)
+    return /\w+/ if string_array.empty?
+    abbreviations = abbreviations.keys.join('|').prepend('^(') << (')$')
+    Regexp.new(abbreviations, 'ignore case')
+  end
+
+  
+  def display_input_prompt(message)
+    print message.colorize(:light_cyan) + PROMPT.colorize(:light_magenta)
+  end
+
+
+  def display_thinking_animation(phrase, wait_time)
+    print phrase
+    5.times do
+      print '.'
+      sleep wait_time
+    end
+    puts
+    puts
+  end
 
   def get_validated_input(valid_input)
     abbreviations = Abbrev.abbrev(valid_input.map(&:downcase))
@@ -195,16 +202,7 @@ module TTTUtils
     abbreviations[user_input] || user_input
   end
 
-  def build_regexp_pattern(string_array, abbreviations)
-    return /\w+/ if string_array.empty?
-    abbreviations = abbreviations.keys.join('|').prepend('^(') << (')$')
-    Regexp.new(abbreviations, 'ignore case')
-  end
-
-  def display_input_prompt(message)
-    print message.colorize(:light_cyan) + PROMPT.colorize(:light_magenta)
-  end
-
+  
   def pause_screen
     display_input_prompt('Press enter to continue')
     gets
@@ -219,13 +217,14 @@ class TTTEngine
   # tracking board, number of players, scores of players (for multi-rounds)
   # player turn order, 
   include TTTUtils
-  attr_accessor :num_players, :player_scores, :turn_order, :round_winner, 
-                :game_board, :players, :board, :available_computer_opponents
+  attr_accessor :number_of_players, :player_scores, :turn_order, :round_winner, 
+                :game_board, :players, :board
   
   def initialize
     @board = Board.new
-    @available_computer_opponents = COMPUTER_OPPONENTS.keys
-    @players = setup_players(@board.all_winning_combos)
+    @players = setup_players(board.all_winning_combos)
+    @number_of_players = players.count
+    @turn_order = choose_turn_order
     @rounds_played = 0
     @tie_game_count = 0
     @round_winner = nil
@@ -236,12 +235,9 @@ class TTTEngine
   end
 
   def play
-
     clear_screen
     display_welcome_screen
     loop do 
-      choose_turn_order
-      puts board
       players_take_turns until round_winner? || board_full?
       
       update_player_score
@@ -269,7 +265,7 @@ class TTTEngine
   def choose_player_type(player_number)
     clear_screen
 
-    if available_computer_opponents.empty?
+    if Player.available_computer_opponents.empty?
       puts MESSAGES['no_computer_opponents_left']
       return 'human'
     end
@@ -277,6 +273,50 @@ class TTTEngine
     puts "Do you want player #{player_number} to be a human or computer player?"
     display_input_prompt("Type 'h' for human or 'c' for computer")
     get_validated_input(%w[human computer])
+  end
+
+  def choose_turn_order
+    clear_screen
+    puts MESSAGES['turn_order_choices']
+    display_input_prompt('Which do you choose [1, 2, or 3]?')
+    turn_order_menu_choice = get_validated_input(%w[1 2 3])
+
+    turn_order = create_turn_order_from_choice!(turn_order_menu_choice)
+    display_turn_order(turn_order)
+    turn_order
+  end
+
+  def choose_who_goes_first
+    players.each_with_index do |player, idx|
+      puts "#{idx + 1}. #{player.name}"
+    end
+
+    display_input_prompt("Choose [#{(1...number_of_players).to_a.join(', ')} or ")
+    display_input_prompt("#{number_of_players}]")
+    user_pick = get_validated_input((1..number_of_players).to_a.map(&:to_s))
+    players[user_pick.to_i - 1]
+  end
+
+  def create_turn_order_from_choice!(choice)
+    case choice
+    when '1' 
+      players
+    when '2'
+      players.shuffle
+    when '3'
+      first_player = choose_who_goes_first
+      other_players = players - [first_player]
+      [first_player] + other_players
+    end
+  end
+
+  def display_turn_order(turn_order)
+    puts ''
+    puts 'The turn order will be '
+    puts ''
+    turn_order.each { |player| puts player.name.colorize(player.color) }
+    puts ''
+    pause_screen
   end
 
   def display_welcome_screen
@@ -306,6 +346,7 @@ class TTTEngine
     players = []
     max_players = board.max_players
     num_players = max_players == 2 ? 2 : choose_number_of_players(max_players)
+
     num_players.times do |player_number|
       player_type = choose_player_type(player_number + 1)
       if player_type == 'human'
@@ -520,20 +561,30 @@ end
 
 class Player
   include TTTUtils
-  attr_accessor :square_choice_to_mark, :turn_history, :name, :symbol, :color
+  attr_accessor :square_choice_to_mark, :turn_history, :name, :symbol, :color, 
+                 :player_number
 
   @@available_symbols = %w[x o triangle square plus_sign]
   @@available_colors = %i[blue red cyan magenta yellow white]
+  @@available_computer_opponents = COMPUTER_OPPONENTS.keys
 
   def initialize(player_number, winning_board_combos)
-    @name = choose_name.capitalize
+    @player_number = player_number
+    @name = choose_name!.capitalize
     @symbol = choose_symbol!
     @color = choose_color!
-    @position = player_number
     @winning_combos_left = Marshal.load(Marshal.dump(winning_board_combos))
     @turn_history = []
     @points_scored = 0
     @game_wins = 0
+  end
+
+  def self.available_computer_opponents
+    @@available_computer_opponents
+  end
+
+  def self.available_computer_opponents=(value)
+    @@available_computer_opponents = value
   end
 
   def take_turn
@@ -551,7 +602,6 @@ class Player
 
   private
 
-  
   attr_reader :position
 
 end
@@ -561,7 +611,7 @@ class Human < Player
   private
   
 
-  def choose_name
+  def choose_name!
     display_input_prompt("What's the name of player #{position}?")
     get_validated_input([])
   end
@@ -584,7 +634,7 @@ class Human < Player
     display_input_prompt('Enter your choice')
     color_choice = get_validated_input(available_colors)
     @@available_colors.delete(color_choice.to_sym)
-    print "#{self.name} chose #{color_choice} as their color." 
+    puts "#{self.name} chose #{color_choice} as their color." 
     
     pause_screen
     color_choice.to_sym
@@ -592,6 +642,63 @@ class Human < Player
 end
 
 class Computer < Player
+
+  private
+
+  def choose_name!
+    opponents_list = Player.available_computer_opponents.map(&:to_s)
+
+    if randomly_choose_opponent?(opponents_list)
+      opponent = random_opponent(opponents_list)
+    else
+      opponent = pick_opponent(opponents_list)
+    end
+    Player.available_computer_opponents.delete(opponent.to_sym)
+    opponent
+  end
+
+  def choose_symbol!
+    symbol = @@available_symbols.sample
+    @@available_symbols.delete(symbol)
+    symbol
+  end
+
+  def choose_color!
+    COMPUTER_OPPONENTS[name.to_sym][:color]
+  end
+
+  def pick_opponent(opponents_list)
+    puts  MESSAGES['pick_opponent'] % opponents_list.join(', ')
+    display_input_prompt('Type in their name exactly as spelled')
+    computer_opponent = get_validated_input(opponents_list)
+    
+    puts "You picked #{computer_opponent.capitalize}!"
+    pause_screen
+    computer_opponent
+  end
+
+  def random_opponent(opponents_list)
+    puts 'You chose to randomly pick a computer opponent.'
+    computer_opponent = opponents_list.sample
+    display_thinking_animation('Randomly choosing', 0.3)
+    puts "Looks like #{computer_opponent} was chosen!"
+    pause_screen
+    computer_opponent
+  end
+
+  def randomly_choose_opponent?(opponents_list)
+    puts
+    puts "Player #{player_number} will be a computer opponent."
+    print 'Available computer opponents left are '
+    puts "[#{opponents_list.join(', ')}]"
+    puts 'Do you want to choose the opponent or have it randomly picked for you?'
+    display_input_prompt(
+      "Type 'C' to (C)hoose an opponent or 'R' to have it " \
+        '(R)andomly assigned'
+    )
+
+    get_validated_input(%w[c r]).downcase == 'r'
+  end
 end
 
 game = TTTEngine.new
