@@ -30,3 +30,22 @@ choose_number_of_players: |+
 no_computer_opponents_left: 
   Looks like there are no more computer opponents left.
   This player has to be human.
+
+available_symbol_markers: |+
+  
+  In this version of the game, you don't have to choose only between
+  being an X or an O.
+  This expanded version lets you choose between the usual X or O,
+  but also a Square, Triangle
+  or Plus sign shape as your board marker.
+  '
+  Choose from the menu:
+  - 'X' for X marker
+  - 'O' for O marker
+  - 'Square' for a square marker
+  - 'Triangle' for a triangle marker
+  - 'Plus_sign' for a plus sign marker
+  '
+  Some symbols may have already been chosen by another player.
+  The available symbols are: [%s]
+

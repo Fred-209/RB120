@@ -70,7 +70,7 @@ Symbol
 Turn
 
 =end
-
+require 'pry'
 require 'colorize'
 require 'yaml'
 require 'abbrev'
@@ -180,19 +180,25 @@ SYMBOL_MARKERS_MAP = {
 }
 
 module TTTUtils
-  def get_validated_input(valid_input_list)
-    abbreviations_str = Abbrev.abbrev(valid_input_list).keys.join('|')
-    abbreviations_str.prepend('^(') << (')$')
-    valid_pattern = Regexp.new(abbreviations_str, 'ignore case')
+
+  def get_validated_input(valid_input)
+    abbreviations = Abbrev.abbrev(valid_input.map(&:downcase))
+    valid_pattern = build_regexp_pattern(valid_input, abbreviations)
     
     user_input = ''
     loop do
       user_input = gets.chomp.downcase.strip
       break if valid_pattern.match?(user_input)
       puts "That's not a valid choice. Try again."
-      puts "Choices are [#{valid_input_list.join(', ')}]: "
+      puts "Choices are [#{valid_input.join(', ')}]: "
     end
-    user_input
+    abbreviations[user_input] || user_input
+  end
+
+  def build_regexp_pattern(string_array, abbreviations)
+    return /\w+/ if string_array.empty?
+    abbreviations = abbreviations.keys.join('|').prepend('^(') << (')$')
+    Regexp.new(abbreviations, 'ignore case')
   end
 
   def display_input_prompt(message)
@@ -298,7 +304,8 @@ class TTTEngine
 
   def setup_players(winning_board_combos)
     players = []
-    num_players = board.max_players == 2 ? 2 : choose_number_of_players
+    max_players = board.max_players
+    num_players = max_players == 2 ? 2 : choose_number_of_players(max_players)
     num_players.times do |player_number|
       player_type = choose_player_type(player_number + 1)
       if player_type == 'human'
@@ -306,7 +313,7 @@ class TTTEngine
       else
         players << Computer.new(player_number + 1, winning_board_combos)
       end
-    end2
+    end
     players
   end
 
@@ -316,7 +323,7 @@ end
 
 class Board
   include TTTUtils
-  attr_reader :max_players
+  attr_reader :max_players, :all_winning_combos
   
   def initialize
     @size = choose_size
@@ -361,7 +368,7 @@ class Board
   private
   
   attr_accessor :size, :available_squares
-  attr_reader :total_squares, :grid, :all_winning_combos
+  attr_reader :total_squares, :grid
 
   def create_grid
     (1..total_squares).each_with_object({}) do |square_number, squares_grid|
@@ -513,12 +520,15 @@ end
 
 class Player
   include TTTUtils
-  attr_accessor :square_choice_to_mark, :turn_history
+  attr_accessor :square_choice_to_mark, :turn_history, :name, :symbol, :color
 
   @@available_symbols = %w[x o triangle square plus_sign]
-  @@available_colors = %i[light_red, yellow, light_blue, white, light_green]
+  @@available_colors = %i[blue red cyan magenta yellow white]
 
   def initialize(player_number, winning_board_combos)
+    @name = choose_name.capitalize
+    @symbol = choose_symbol!
+    @color = choose_color!
     @position = player_number
     @winning_combos_left = Marshal.load(Marshal.dump(winning_board_combos))
     @turn_history = []
@@ -541,27 +551,43 @@ class Player
 
   private
 
+  
   attr_reader :position
+
 end
 
 class Human < Player
-  
-  def initialize(player_number, winning_board_combos)
-    super
-    @name = choose_name
-    @symbol = choose_symbol
-  end
-
+    
   private
   
 
   def choose_name
     display_input_prompt("What's the name of player #{position}?")
-    
+    get_validated_input([])
   end
 
-  def choose_symbol
+  def choose_symbol!
+    clear_screen
+    avail_symbols_formatted = @@available_symbols.map(&:capitalize).join(', ')
+    puts MESSAGES['available_symbol_markers'] % [avail_symbols_formatted]
+    display_input_prompt('Please enter your choice')
+    symbol = get_validated_input(@@available_symbols)
+    @@available_symbols.delete(symbol)
+    SYMBOL_MARKERS_MAP[symbol]
+  end
 
+  def choose_color!
+     available_colors = @@available_colors.map{ |color| color.to_s.capitalize}
+    
+    puts 'What color do you want your symbol marker to be?'
+    puts "Available choices are: [#{available_colors.join(', ')}]"
+    display_input_prompt('Enter your choice')
+    color_choice = get_validated_input(available_colors)
+    @@available_colors.delete(color_choice.to_sym)
+    print "#{self.name} chose #{color_choice} as their color." 
+    
+    pause_screen
+    color_choice.to_sym
   end
 end
 
