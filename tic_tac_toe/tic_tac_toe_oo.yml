@@ -1,0 +1,32 @@
+welcome_message: |+
+  This version of the classic game of X's and O's can be played with up 
+  to 5 players, and this can be any combination of human or computer 
+  players. The game board can be the traditional 3x3 grid of squares, or 
+  you can choose any grid size from 3x3 up to 10x10.
+  
+board_size_message: |+
+
+  Please choose what size of player board you want.
+  Enter a single number and the board will be a grid of that size.
+  Example: If you want a 3x3 board, type 3. A 9x9 board, type 9.
+  3x3 is the minimum board size, 10x10 is the max.
+  
+choose_number_of_players: |+
+  Choose the total number of players (including computer opponents).
+  This can be anywhere from 2 to 5 players, but the board size dictates
+  how many you can choose. 
+  
+  For board sizes of 3 or 4, max number of players is 2
+  For board sizes of between 5 and 7, max players is 3.
+  For board sizes of 8 or 9, max players is 4.
+  And for a board size of 10, you can have up to 5 players.
+  
+  Keep in mind if you're running a speed game of computer VS computer
+  matches that large boards with longer series of games may take a long
+  time to run. The max number of players for your chosen board size 
+  is %s.
+
+
+no_computer_opponents_left: 
+  Looks like there are no more computer opponents left.
+  This player has to be human.
