@@ -223,9 +223,10 @@ class TTTGame
   # player turn order, 
   include TTTUtils
   attr_accessor :number_of_players, :player_scores, :turn_order, :round_winner, 
-                :game_board, :players, :board, :tied_game 
+                :game_board, :players, :board, :tied_game
   
   def initialize
+    @first_run = true
     @board = nil
     @players = nil
     @speed_game = nil
@@ -241,8 +242,6 @@ class TTTGame
   end
 
   def play
-    first_run = true
-
     loop do 
       clear_screen
       display_welcome_screen if first_run
@@ -251,8 +250,9 @@ class TTTGame
       play_a_series ? play_series_of_games : play_single_game
       game_winner ? congratulate_winner : display_tie_game_message
 
-      first_run = false
-      reset_available_player_options!
+      self.first_run = false
+      
+      reset_game_stats!
       break unless play_again?
     end
 
@@ -261,7 +261,8 @@ class TTTGame
 
   private
 
-  attr_accessor :points_needed_to_win
+  attr_accessor :points_needed_to_win, :first_run, :rounds_played, 
+                :tie_game_count, :speed_game, :game_winner, :play_a_series
 
   def setup_game_options
     self.board = Board.new
@@ -272,8 +273,6 @@ class TTTGame
     self.play_a_series = single_game_or_series?
     self.points_needed_to_win = play_a_series ? choose_points_needed_to_win : 1
   end
-
-  attr_accessor :speed_game, :game_winner, :play_a_series
 
   def all_players_are_computers?
     players.all? { |player| player.class == Computer}
@@ -310,19 +309,6 @@ class TTTGame
     puts "Do you want player #{player_number} to be a human or computer player?"
     display_input_prompt("Type 'h' for human or 'c' for computer")
     get_validated_input(%w[human computer])
-  end
-
-  def single_game_or_series?
-    puts MESSAGES['single_game_or_series']
-    display_input_prompt("Type 'series' or 'single':")
-    choice = get_validated_input(%w[series single])
-
-    if choice == 'single'
-      delay_screen(1.5, "You chose to play a single game.")
-    else
-      delay_screen(1.5, "You chose to play a series of games.")
-    end
-    choice == 'series'
   end
 
   def choose_turn_order
@@ -374,6 +360,7 @@ class TTTGame
   end
 
   def display_non_speed_game_messages
+    puts
     puts "Looks like a tie this round! Noone scores." if tied_game
     puts "#{round_winner.name} won this round!"
     puts "Here's the score so far:"
@@ -416,6 +403,12 @@ class TTTGame
     puts MESSAGES['welcome_message']
   end
   
+  def play_again?
+    display_input_prompt('Do you want to play again?')
+    choice = get_validated_input(%w[y n])
+    choice.downcase == 'y'
+  end
+
   def play_round
     players.cycle do |player|
       player.take_turn
@@ -432,7 +425,8 @@ class TTTGame
 
   def play_series_of_games
     play_rounds_until_game_winner
-    puts "#{game_winner.name} scored #{points_needed_to_win} points!"
+    puts "#{game_winner.name} scored #{points_needed_to_win} points to win" \
+          "the series!"
     display_speed_game_recap if speed_game
 
     self.play_a_series = false
@@ -455,8 +449,7 @@ class TTTGame
       play_round
       update_game_from_round_results!
       display_non_speed_game_messages unless speed_game
-      board.reset_for_new_round!
-      reset_players_for_new_round!
+      reset_for_new_round!
     end
   end
 
@@ -480,21 +473,38 @@ class TTTGame
     Player.available_computer_opponents = COMPUTER_OPPONENTS.keys
   end
   
-  def reset_players_for_new_round!
-    players.each do |player|
-      player.erase_turn_history!
-      player.reset_winning_combos_left!
-    end
+  def reset_for_new_round!
+    board.reset_for_new_round!
+    reset_players_for_new_round!
+    self.round_winner = nil
+    self.tied_game = false
   end
 
-  def play_again?
-    display_input_prompt('Do you want to play again?')
-    choice = get_validated_input(%w[y n])
-    choice.downcase == 'y'
+  def reset_game_stats!
+    self.game_winner = nil
+  end
+
+  def reset_players_for_new_round!
+    players.each { |player| player.reset_for_new_round!}
   end
 
   def set_shared_player_defaults!
-    
+    Player.available_symbols = %w[x o triangle square plus_sign]
+    Player.available_colors = %i[blue red cyan magenta yellow white]
+    Player.available_computer_opponents = COMPUTER_OPPONENTS.keys
+  end
+
+  def single_game_or_series?
+    puts MESSAGES['single_game_or_series']
+    display_input_prompt("Type 'series' or 'single':")
+    choice = get_validated_input(%w[series single])
+
+    if choice == 'single'
+      delay_screen(1.5, "You chose to play a single game.")
+    else
+      delay_screen(1.5, "You chose to play a series of games.")
+    end
+    choice == 'series'
   end
 
   def setup_players(winning_board_combos)
@@ -518,15 +528,25 @@ class TTTGame
     num_players_that_can_win = number_of_players
 
     players.each do |player|
-      num_players_that_can_win -=1 if player.winning_combos_left.empty?
+      p player.winning_combos_left
+      num_players_that_can_win -=1 if player.winning_combos_left.flatten.empty?
     end
+    p num_players_that_can_win
+    p num_players_that_can_win.zero?
+
+    gets
     num_players_that_can_win.zero?
   end
 
   def update_all_players_winning_combos_left!(square)
     players.each do |player|
-      player.winning_combos_left.each do |combo|
-        combo.delete(square)
+      viable_combos = player.winning_combos_left
+      other_players = players.reject { |other_player| other_player == player}
+      other_players.each do |other_player|
+        turn_history = other_player.turn_history
+        viable_combos.clone.each do |combo|
+          viable_combos.delete(combo) if !(combo & turn_history).empty?
+        end
       end
     end
   end
@@ -577,8 +597,6 @@ class Board
   def reset_for_new_round!
     self.available_squares = (1..total_squares).to_a
     self.grid = create_grid
-    self.round_winner = nil
-    self.tied_game = false
   end
 
   def to_s
@@ -592,8 +610,8 @@ class Board
 
   private
   
-  attr_accessor :size
-  attr_reader :total_squares, :grid
+  attr_accessor :size, :grid
+  attr_reader :total_squares
   attr_writer :available_squares
 
   def create_grid
@@ -655,7 +673,7 @@ class Board
     board_size = get_validated_input(valid_board_sizes)
     
     puts ''
-    delay_screen(1.5, "You chose a #{board_size}x#{board_size} board size.")
+    delay_screen(1, "You chose a #{board_size}x#{board_size} board size.")
     board_size.to_i
   end
 
@@ -751,12 +769,8 @@ class Player
   include TTTUtils
   attr_accessor  :turn_history, :name, :symbol, :color, 
                  :player_number, :square_choice, :winning_combos_left, 
-                 :points_scored
+                 :points_scored, :game_wins
   attr_reader :board
-
-  @@available_symbols = %w[x o triangle square plus_sign]
-  @@available_colors = %i[blue red cyan magenta yellow white]
-  @@available_computer_opponents = COMPUTER_OPPONENTS.keys
 
   def initialize(player_number, board)
     @board = board
@@ -795,8 +809,9 @@ class Player
     @@available_computer_opponents = value
   end
 
-  def erase_turn_history!
-    self.turn_history = []
+  def reset_for_new_round!
+    self.erase_turn_history!
+    self.reset_winning_combos_left!
   end
 
   def take_turn
@@ -822,6 +837,10 @@ class Player
 
   attr_reader :position
 
+  def erase_turn_history!
+    self.turn_history = []
+  end
+
   def update_turn_history!
     turn_history << square_choice
   end
@@ -840,12 +859,14 @@ class Human < Player
   def choose_name!
     display_input_prompt("What's the name of player #{position}?")
     name = get_validated_input([])
-    delay_screen(1.5, "Hello, #{name}!")
+    puts ("Hello, #{name}!")
+    puts
+    # delay_screen(1.5, "Hello, #{name}!")
     name
   end
 
   def choose_symbol!
-    clear_screen
+    # clear_screen
     avail_symbols_formatted = Player.available_symbols.map(&:capitalize).join(', ')
     puts MESSAGES['available_symbol_markers'] % [avail_symbols_formatted]
     display_input_prompt('Please enter your choice')
@@ -863,7 +884,8 @@ class Human < Player
     color_choice = get_validated_input(available_colors)
     Player.available_colors.delete(color_choice.to_sym)
     
-    delay_screen(1, "#{self.name} chose #{color_choice} as their color.")
+    puts ("#{self.name} chose #{color_choice} as their color.")
+    # delay_screen(1, "#{self.name} chose #{color_choice} as their color.")
     color_choice.to_sym
   end
 
