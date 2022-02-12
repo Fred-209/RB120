@@ -67,3 +67,35 @@ turn_order_choices: |+
   2. Shuffle the turn order randomly.
   3. Choose who goes first.
   
+single_game_or_series: |+
+
+  Do you want to play a single game or a series of games?
+  In a series, you play multiple rounds of Tic Tac Toe until
+  one player reaches a certain score.
+  
+   
+  
+
+choose_num_points_to_win: |+
+
+  How many points should a player score before being
+  declared the winner? Each game win is worth 1 point.
+  You can choose any number from 2 through 10
+
+
+speed_game: |+
+  It looks like all the players are computer players.
+  Would you like to speed up the game(s)?
+  They will battle it out and you will only see the final
+  board result if you choose this.
+
+tie_game: |+
+
+  It looks like either there are no empty squares to pick from on the
+  board, or it's impossible for anyone to win now because there are
+  no more winning combinations left for anyone.
+  TIE GAME!!
+  
+goodbye: |+
+
+  Thanks for Playing! Goodbye!!
