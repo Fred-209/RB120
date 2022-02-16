@@ -67,14 +67,15 @@ turn_order_choices: |+
   2. Shuffle the turn order randomly.
   3. Choose who goes first.
   
-single_game_or_series: |+
+play_a_series: |+
 
   Do you want to play a single game or a series of games?
   In a series, you play multiple rounds of Tic Tac Toe until
   one player reaches a certain score.
   
+  1. Series
+  2. Single
    
-  
 
 choose_points_needed_to_win: |+
 
