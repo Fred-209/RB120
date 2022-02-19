@@ -144,8 +144,6 @@ module TTTUtils # requires colorize gem
 end
 
 class TTTGame
-  # tracking board, number of players, scores of players (for multi-rounds)
-  # player turn order,
   include TTTUtils
   attr_accessor :number_of_players,
                 :player_scores,
@@ -228,9 +226,7 @@ class TTTGame
 
   def choose_number_of_players(max_players)
     clear_screen
-    puts MESSAGES['choose_number_of_players'] % [
-           max_players.to_s.colorize(:red)
-         ]
+    puts format(MESSAGES['choose_number_of_players'], max_players.to_s.colorize(:red))
     valid_num_player_choices = (2..max_players).map(&:to_s)
     display_input_prompt('Enter the number of players: ')
     num_players = get_validated_input(valid_num_player_choices)
@@ -425,7 +421,7 @@ class TTTGame
   end
 
   def reset_players_for_new_round!
-    players.each { |player| player.reset_for_new_round! }
+    players.each(&:reset_for_new_round!)
   end
 
   def set_shared_player_defaults!
@@ -448,7 +444,7 @@ class TTTGame
     choice == '1'
   end
 
-  def setup_players(winning_board_combos)
+  def setup_players(_winning_board_combos)
     players = []
     max_players = board.max_players
     num_players = max_players == 2 ? 2 : choose_number_of_players(max_players)
@@ -456,11 +452,11 @@ class TTTGame
 
     num_players.times do |player_number|
       player_type = choose_player_type(player_number + 1)
-      if player_type == 'human'
-        players << Human.new(player_number + 1, board, players)
-      else
-        players << Computer.new(player_number + 1, board, players)
-      end
+      players << if player_type == 'human'
+                   Human.new(player_number + 1, board, players)
+                 else
+                   Computer.new(player_number + 1, board, players)
+                 end
     end
     players
   end
@@ -537,7 +533,7 @@ class Board
   end
 
   def to_s
-    self.display
+    display
   end
 
   def update_grid!(square_number, symbol, color)
@@ -681,16 +677,16 @@ class Square
     layout = []
 
     7.times do
-      if number < 10
-        layout << [' ', ' ', ' ', ' ', ' ', ' ', ' ']
-      elsif number << 100
-        layout << [' ', ' ', ' ', '  ', ' ', ' ']
-      else
-        layout << [' ', ' ', ' ', '   ', ' ']
-      end
+      layout << if number < 10
+                  [' ', ' ', ' ', ' ', ' ', ' ', ' ']
+                elsif number << 100
+                  [' ', ' ', ' ', '  ', ' ', ' ']
+                else
+                  [' ', ' ', ' ', '   ', ' ']
+                end
     end
 
-    #label center of square with square number
+    # label center of square with square number
     layout[3][3] = number
     layout
   end
@@ -748,8 +744,8 @@ class Player
   end
 
   def reset_for_new_round!
-    self.erase_turn_history!
-    self.reset_winning_combos_left!
+    erase_turn_history!
+    reset_winning_combos_left!
   end
 
   def take_turn(speed_game)
@@ -808,7 +804,7 @@ class Human < Player
   def choose_symbol!
     avail_symbols_formatted =
       Player.available_symbols.map(&:capitalize).join(', ')
-    puts MESSAGES['available_symbol_markers'] % [avail_symbols_formatted]
+    puts format(MESSAGES['available_symbol_markers'], avail_symbols_formatted)
     display_input_prompt('Please enter your choice')
     symbol = get_validated_input(@@available_symbols)
     Player.available_symbols.delete(symbol)
@@ -825,7 +821,7 @@ class Human < Player
     color_choice = get_validated_input(available_colors)
     Player.available_colors.delete(color_choice.to_sym)
 
-    puts ("#{self.name} chose #{color_choice} as their color.")
+    puts("#{name} chose #{color_choice} as their color.")
     color_choice.to_sym
   end
 
@@ -854,11 +850,11 @@ class Computer < Player
 
   def choose_name!
     opponents_list = Player.available_computer_opponents.map(&:to_s)
-    if randomly_choose_opponent?(opponents_list)
-      opponent = random_opponent(opponents_list)
-    else
-      opponent = pick_opponent(opponents_list)
-    end
+    opponent = if randomly_choose_opponent?(opponents_list)
+                 random_opponent(opponents_list)
+               else
+                 pick_opponent(opponents_list)
+               end
     Player.available_computer_opponents.delete(opponent.to_sym)
     opponent
   end
@@ -904,19 +900,26 @@ class Computer < Player
 
   def choose_level_3_ai_square(possible_winning_square)
     closest_combo = winning_combos_left.min_by(&:size)
-    num_squares_to_win = closest_combo ? closest_combo.size : 0
+    num_squares_to_win = if closest_combo
+                           closest_combo.size
+                         else
+                           0
+                         end
+
+    # num_squares_to_win = closest_combo ? closest_combo.size : 0
 
     return random_available_square if intelligence_score < 3
     return choose_middle_or_corner_square if turn_history.empty?
     return closest_combo.first if num_squares_to_win == 1
     return possible_winning_square if possible_winning_square
     return closest_combo.sample if closest_combo
+
     random_available_square
   end
 
   def choose_middle_or_corner_square
     middle_square = (board.total_squares / 2) + 1
-    corner_squares = get_corner_squares
+    corner_squares = determine_corner_squares
     return middle_square if board.available_squares.include?(middle_square)
 
     if board.available_squares.any? { |square| corner_squares.include?(square) }
@@ -931,10 +934,10 @@ class Computer < Player
     board.all_winning_combos.each do |combo|
       players_list.each do |player|
         next if name == player.name
-        
+
         squares_to_win = combo.difference(turn_history)
         if squares_to_win.size == 1 &&
-             board.available_squares.include?(squares_to_win[0])
+           board.available_squares.include?(squares_to_win[0])
           return squares_to_win.first
         end
       end
@@ -942,7 +945,7 @@ class Computer < Player
     nil
   end
 
-  def get_corner_squares
+  def determine_corner_squares
     nw_corner_square = 1
     ne_corner_square = board.size
     sw_corner_square = board.total_squares - board.size
@@ -980,7 +983,8 @@ class Computer < Player
     puts "Player #{player_number} will be a computer opponent."
     print 'Available computer opponents left are '
     puts "[#{opponents_list.join(', ')}]"
-    puts 'Do you want to choose the opponent or have it randomly picked for you?'
+    puts 'Do you want to choose the opponent or have it randomly picked for '
+    puts 'you?'
     display_input_prompt(
       "Type 'C' to (C)hoose an opponent or 'R' to have it " \
         '(R)andomly assigned'
