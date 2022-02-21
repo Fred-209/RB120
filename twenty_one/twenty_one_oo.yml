@@ -1,3 +1,14 @@
+draw_or_stay: |+
+  Do you want to draw a card or stay your hand?
+  Type 'stay' to stay your hand or 'draw' to draw a card.
+
+  Which do you choose? [stay, draw] %s
+
+hand_display: |+
+  
+  %s's turn.
+  Current hand total: %s
+
 play_multiple_rounds: |
   Do you want to play a single game, or play until either you or the dealer
   has won 3 games?

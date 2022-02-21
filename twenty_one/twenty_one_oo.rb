@@ -96,16 +96,16 @@ module Utils # requires abbrev
   end
 end
 
-class Game
+class TwentyOne
   include Utils
 
   MESSAGES = YAML.load_file('twenty_one_oo.yml')
-
+  BUST_THRESHOLD = 21
 
   def initialize
     first_run = true
     display_welcome if first_run
-    @rounds_to_win = choose_number_of_rounds
+    @points_to_win = choose_points_to_win
     @deck = Deck.new
     @player = Player.new
     @dealer = Dealer.new
@@ -116,6 +116,7 @@ class Game
   def start
     loop do
       deal_starting_hands
+      play_game until game_winner?
       break
       # player_takes_turn
       # dealer_takes_turn
@@ -129,12 +130,18 @@ class Game
 
   private
 
-  attr_accessor :deck, :player, :dealer, :rounds_played, :tie_games, :first_run
+  attr_accessor :deck, :player, :dealer, :rounds_played, :tie_games, :first_run,
+                :points_to_win
 
-  def choose_number_of_rounds
+  def choose_points_to_win
     print MESSAGES['play_multiple_rounds']
     print "Type 's' for single game or 'm' for multiple games #{PROMPT}"
     get_validated_input(%w[s m]) == 's' ? 1 : 3
+  end
+
+  def choose_to_stay_hand?
+    print format(MESSAGES['draw_or_stay'], PROMPT)
+    get_validated_input(%w[stay draw]) == 'stay'
   end
 
   def deal_card_to_participant(participant)
@@ -145,6 +152,18 @@ class Game
     puts "#{participant.name} was dealt a #{card}."
     puts
     participant.hand.display
+  end
+
+  def display_turn_recap(participant)
+    clear_screen
+    puts 'Turn Recap'
+    puts
+    participant.show_hand
+    puts format(
+      MESSAGES['participant_staying'], participant.name, participant.hand_value
+    )
+      
+    pause_screen
   end
 
   def deal_starting_hands
@@ -166,34 +185,94 @@ class Game
     puts MESSAGES['welcome_message']
   end
 
+  def game_winner?
+    player.points >= points_to_win || dealer.points >= points_to_win
+  end
+
+  def play_game
+    clear_screen
+    self.rounds_played += 1
+    if playing_multiple_games? 
+      puts "Starting round #{rounds_played}"
+    else 
+      puts "Playing Single Game"
+    end
+    player_takes_turn
+    # dealer_takes_turn unless player.busted?
+    # dealer_takes_turn unless player.busted?
+  end
+
+  def player_takes_turn
+    loop do
+      show_all_hands
+      puts format(MESSAGES['hand_display'], player.name, player.hand_value)
+      if choose_to_stay_hand?
+        player.stay_hand!
+        break
+      end
+      deal_card_to_participant(player)
+      sleep 1.25
+      break if player.busted?
+    end
+    display_turn_recap unless player.busted?
+  end
+
+  def playing_multiple_games?
+    points_to_win > 1
+  end
+
   def reset
     self.first_run = false
     self.rounds_played = 0
     self.tie_games = 0
+  end
+
+  def show_all_hands
+    dealer.show_hand
+    player.show_hand
   end
 end
 
 class Participant
   include Utils
   attr_reader :name, :hand
+  attr_accessor :points
 
   def initialize
     @name = assign_name
     @hand = Hand.new
+    @stay = false
+    @points = 0
   end
 
-  def stay; end
+  def stay?
+    stay == true
+  end
 
-  def busted?; end
+  def stay_hand!
+    self.stay = true
+  end
 
-  def total; end
+  def busted?
+    hand_value > TwentyOne::BUST_THRESHOLD
+  end
+
+  def show_hand(show_face_down_card: false)
+    hand.display(show_face_down_card: false)
+  end
+
+  def hand_value
+    hand.cards_value
+  end
 
   private
 
   attr_writer :name
+  attr_accessor :busted, :stay
 end
 
 class Player < Participant
+
   private
 
   def assign_name
@@ -305,6 +384,10 @@ class Hand
     cards.count
   end
 
+  def cards_value
+    cards.map(&:value).sum
+  end
+
   def display(show_face_down_card: false)
     suits = suits_list
     faces = faces_list
@@ -334,12 +417,6 @@ class Hand
 
   def <=>(other)
     cards_value <=> other.cards_value
-  end
-
-  protected
-
-  def cards_value
-    cards.map(&:value).sum
   end
 
   private
@@ -386,6 +463,8 @@ class Hand
   attr_reader :cards
 end
 
-Game.new.start
+game = TwentyOne.new
+game.start
+pry.start
 
 
