@@ -109,6 +109,7 @@ class Game
   def start
     loop do
       deal_starting_hands
+      break
       # player_takes_turn
       # dealer_takes_turn
 
@@ -244,7 +245,7 @@ class Card
   LOWER_CARD_LABEL_GRAPHIC = ('┃' + '%9.9s' + '┃')
   BOTTOM_OF_CARD_GRAPHIC = MESSAGES['bottom_card_line']
 
-  attr_reader :face, :suit
+  attr_reader :face, :suit, :value
   attr_accessor :face_down
 
   def initialize(suit, face)
@@ -270,10 +271,6 @@ class Hand
     @cards = []
   end
 
-  def total
-    # calculate total value of all cards in @cards
-  end
-
   def add_card(card)
     cards << card
   end
@@ -285,7 +282,7 @@ class Hand
   def display(show_face_down_card: false)
     suits = suits_list
     faces = faces_list
-    
+
     if cards.first.face_down
       unless show_face_down_card
         suits[0] = '#'
@@ -310,7 +307,13 @@ class Hand
   # end
 
   def <=>(other)
-    cards.total <=> other.cards.total
+    cards_value <=> other.cards_value
+  end
+
+  protected
+
+  def cards_value
+    cards.map(&:value).sum
   end
 
   private
@@ -330,9 +333,6 @@ class Hand
   def display_mid_cards_section(suits)
     puts
     print_card_label_line(Card::MIDDLE_CARD_LABEL_GRAPHIC, suits)
-    # card_count.times do |count|
-    #   print format(Card::MIDDLE_CARD_LABEL_GRAPHIC, suits[count])
-    # end
     puts
     puts Card::MID_CARD_GRAPHIC * card_count
     puts Card::MID_CARD_GRAPHIC * card_count
@@ -341,9 +341,6 @@ class Hand
   def display_upper_cards_section(faces)
     puts Card::TOP_OF_CARD_GRAPHIC * card_count
     print_card_label_line(Card::UPPER_CARD_LABEL_GRAPHIC, faces)
-    # card_count.times do |count|
-    #   print format(Card::UPPER_CARD_LABEL_GRAPHIC, faces[count])
-    # end
   end
 
   def print_card_label_line(card_section, graphic)
@@ -365,4 +362,4 @@ end
 
 Game.new.start
 
-# pry.start
+
