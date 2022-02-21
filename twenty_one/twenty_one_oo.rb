@@ -130,7 +130,7 @@ class Game
     participant.hand.add_card(card)
     puts "#{participant.name} was dealt a #{card}."
     puts
-    display_hand(participant.hand)
+    participant.hand.display
   end
 
   def deal_starting_hands
@@ -139,33 +139,8 @@ class Game
       [player, dealer].each do |participant|
         deal_card_to_participant(participant)
         puts
-        # display_card_graphics
       end
     end
-  end
-
-  def display_card_graphics(number_of_cards, suits, faces)
-    puts Card::TOP_OF_CARD_GRAPHIC * number_of_cards
-    puts Card::UPPER_CARD_LABEL_GRAPHIC * number_of_cards % faces
-    puts Card::MIDDLE_CARD_LABEL_GRAPHIC * number_of_cards % suits
-    puts Card::MID_CARD_GRAPHIC * number_of_cards
-    puts Card::MID_CARD_GRAPHIC * number_of_cards
-    puts Card::LOWER_CARD_LABEL_GRAPHIC * number_of_cards % faces
-    puts Card::BOTTOM_OF_CARD_GRAPHIC * number_of_cards
-  end
-
-  def display_hand(hand, show_face_down_card: false)
-    suits = hand.suits
-    faces = hand.faces
-    card_count = hand.card_count
-
-    if hand[0].face_down
-      unless show_face_down_card
-        suits[0] = '#'
-        faces[0] = '#'
-      end
-    end
-    display_card_graphics(card_count, suits, faces)
   end
 
   def display_shuffle_deck_animation
@@ -307,25 +282,32 @@ class Hand
     cards.count
   end
 
-  def empty?
-    cards.empty?
+  def display(show_face_down_card: false)
+    suits = suits_list
+    faces = faces_list
+    
+    if cards.first.face_down
+      unless show_face_down_card
+        suits[0] = '#'
+        faces[0] = '#'
+      end
+    end
+    display_card_graphics(suits, faces)
   end
 
-  def faces
-    cards.map(&:face)
+  def empty?
+    cards.empty?
   end
 
   def remove_card(card)
     cards.delete(card)
   end
 
-  def suits
-    cards.map(&:suit)
-  end
+  
 
-  def [](index)
-    cards[index]
-  end
+  # def [](index)
+  #   cards[index]
+  # end
 
   def <=>(other)
     cards.total <=> other.cards.total
@@ -333,9 +315,54 @@ class Hand
 
   private
 
+  def display_card_graphics(suits, faces)
+    display_upper_cards_section(faces)
+    display_mid_cards_section(suits)
+    display_bottom_cards_section(faces)
+  end
+
+  def display_bottom_cards_section(faces)
+    print_card_label_line(Card::LOWER_CARD_LABEL_GRAPHIC, faces)
+    puts
+    puts Card::BOTTOM_OF_CARD_GRAPHIC * card_count
+  end
+
+  def display_mid_cards_section(suits)
+    puts
+    print_card_label_line(Card::MIDDLE_CARD_LABEL_GRAPHIC, suits)
+    # card_count.times do |count|
+    #   print format(Card::MIDDLE_CARD_LABEL_GRAPHIC, suits[count])
+    # end
+    puts
+    puts Card::MID_CARD_GRAPHIC * card_count
+    puts Card::MID_CARD_GRAPHIC * card_count
+  end
+
+  def display_upper_cards_section(faces)
+    puts Card::TOP_OF_CARD_GRAPHIC * card_count
+    print_card_label_line(Card::UPPER_CARD_LABEL_GRAPHIC, faces)
+    # card_count.times do |count|
+    #   print format(Card::UPPER_CARD_LABEL_GRAPHIC, faces[count])
+    # end
+  end
+
+  def print_card_label_line(card_section, graphic)
+    card_count.times do |count|
+      print format(card_section, graphic[count])
+    end
+  end
+
+  def faces_list
+    cards.map(&:face)
+  end
+
+  def suits_list
+    cards.map(&:suit)
+  end
+
   attr_reader :cards
 end
 
-game = Game.new.start
+Game.new.start
 
 # pry.start
