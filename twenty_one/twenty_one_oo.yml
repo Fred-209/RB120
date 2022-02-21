@@ -1,8 +1,35 @@
-top_card_line: 
-  ┏━━━━━━━━━┓
+play_multiple_rounds: |
+  Do you want to play a single game, or play until either you or the dealer
+  has won 3 games?
 
-mid_card_line:
-  ┃         ┃
+welcome_message: |+
+  Welcome to Twenty One!!
 
-bottom_card_line:
-  ┗━━━━━━━━━┛
+  If you're not familiar with this game (Blackjack), the rules are simple. 
+  You will be playing against the Dealer (computer AI).
+  A traditional deck of 52 cards is shuffled, and you and the dealer are both 
+  dealt 2 cards to start with. 
+
+  The goal is to add the values of your cards up to get as close to 21 as possible
+  without going over. If you go over, you're BUSTED! and lose the game. 
+
+  Jack's, Queen's and King's are worth 10, while an Ace is worth 1 or 11, depending
+  on your need at the time.
+  If you have multiple Aces you can mix up their values between 1 and 11 to get 
+  you as close to 21 as possible without going over.
+
+  
+
+welcome_banner: |+
+  ________                                    __                       ______                      
+  /        |                                  /  |                     /      \                     
+  $$$$$$$$/__   __   __   ______   _______   _$$ |_    __    __       /$$$$$$  | _______    ______  
+    $$ | /  | /  | /  | /      \ /       \ / $$   |  /  |  /  |      $$ |  $$ |/       \  /      \ 
+    $$ | $$ | $$ | $$ |/$$$$$$  |$$$$$$$  |$$$$$$/   $$ |  $$ |      $$ |  $$ |$$$$$$$  |/$$$$$$  |
+    $$ | $$ | $$ | $$ |$$    $$ |$$ |  $$ |  $$ | __ $$ |  $$ |      $$ |  $$ |$$ |  $$ |$$    $$ |
+    $$ | $$ \_$$ \_$$ |$$$$$$$$/ $$ |  $$ |  $$ |/  |$$ \__$$ |      $$ \__$$ |$$ |  $$ |$$$$$$$$/ 
+    $$ | $$   $$   $$/ $$       |$$ |  $$ |  $$  $$/ $$    $$ |      $$    $$/ $$ |  $$ |$$       |
+    $$/   $$$$$/$$$$/   $$$$$$$/ $$/   $$/    $$$$/   $$$$$$$ |       $$$$$$/  $$/   $$/  $$$$$$$/ 
+                                                      /  \__$$ |                                    
+                                                      $$    $$/                                     
+                                                      $$$$$$/     

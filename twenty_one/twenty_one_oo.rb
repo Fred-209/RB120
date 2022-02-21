@@ -40,9 +40,11 @@ require 'pry'
 require 'yaml'
 require 'abbrev'
 
-MESSAGES = YAML.load_file('twenty_one_oo.yml')
+
 
 module Utils # requires abbrev
+  PROMPT = ' => '
+
   def build_regexp_pattern(string_array, abbreviations)
     return /\w+/ if string_array.empty?
 
@@ -97,8 +99,13 @@ end
 class Game
   include Utils
 
+  MESSAGES = YAML.load_file('twenty_one_oo.yml')
+
+
   def initialize
-    display_welcome
+    first_run = true
+    display_welcome if first_run
+    @rounds_to_win = choose_number_of_rounds
     @deck = Deck.new
     @player = Player.new
     @dealer = Dealer.new
@@ -122,7 +129,13 @@ class Game
 
   private
 
-  attr_accessor :deck, :player, :dealer, :rounds_played, :tie_games
+  attr_accessor :deck, :player, :dealer, :rounds_played, :tie_games, :first_run
+
+  def choose_number_of_rounds
+    print MESSAGES['play_multiple_rounds']
+    print "Type 's' for single game or 'm' for multiple games #{PROMPT}"
+    get_validated_input(%w[s m]) == 's' ? 1 : 3
+  end
 
   def deal_card_to_participant(participant)
     card = deck.deal_card
@@ -135,27 +148,28 @@ class Game
   end
 
   def deal_starting_hands
-    display_shuffle_deck_animation
+    clear_screen
+    deck.shuffle(hide_animation: false)
+
     2.times do
       [player, dealer].each do |participant|
         deal_card_to_participant(participant)
         puts
+        sleep (1.25)
       end
     end
   end
 
-  def display_shuffle_deck_animation
-    print 'Shuffling deck....'
-    %w[| / - \\].cycle(3) do |piece|
-      print piece
-      sleep 0.15
-      print "\b"
-    end
-    puts 'Ready to deal!'
+  def display_welcome
+    clear_screen
+    puts MESSAGES['welcome_banner']
+    puts MESSAGES['welcome_message']
   end
 
-  def display_welcome
-    puts 'Welcome to 21!'
+  def reset
+    self.first_run = false
+    self.rounds_played = 0
+    self.tie_games = 0
   end
 end
 
@@ -185,6 +199,7 @@ class Player < Participant
   def assign_name
     print "What's your name?: "
     name = get_validated_input([])
+    puts
     puts "Ready to play some 21, #{name}?"
     delay_screen(1)
     name
@@ -204,10 +219,10 @@ end
 class Deck
   def initialize
     @cards = create_deck
-    shuffle
   end
 
-  def shuffle
+  def shuffle(hide_animation: true)
+    display_shuffle_animation unless hide_animation
     cards.shuffle!
   end
 
@@ -228,6 +243,17 @@ class Deck
       deck << Card.new(suit, face)
     end
   end
+
+  def display_shuffle_animation
+    print 'Shuffling deck....'
+    %w[| / - \\].cycle(3) do |piece|
+      print piece
+      sleep 0.15
+      print "\b"
+    end
+    puts 'Ready to deal!'
+    puts
+  end
 end
 
 class Card
@@ -238,12 +264,12 @@ class Card
   SUITS_EXPANDED = { '♥' => 'Hearts', '♠' => 'Spades', '♦' => 'Diamonds',
                      '♣' => 'Clubs' }.freeze
   FACE_VALUES = { 'J' => 10, 'Q' => 10, 'K' => 10, 'A' => 1 }.freeze
-  TOP_OF_CARD_GRAPHIC = MESSAGES['top_card_line']
+  TOP_OF_CARD_GRAPHIC = "┏━━━━━━━━━┓"
   UPPER_CARD_LABEL_GRAPHIC = ('┃' + '%-9.9s' + '┃')
-  MID_CARD_GRAPHIC = MESSAGES['mid_card_line']
+  MID_CARD_GRAPHIC = "┃         ┃"
   MIDDLE_CARD_LABEL_GRAPHIC = ('┃' + '%s'.center(10) + '┃')
   LOWER_CARD_LABEL_GRAPHIC = ('┃' + '%9.9s' + '┃')
-  BOTTOM_OF_CARD_GRAPHIC = MESSAGES['bottom_card_line']
+  BOTTOM_OF_CARD_GRAPHIC = "┗━━━━━━━━━┛"
 
   attr_reader :face, :suit, :value
   attr_accessor :face_down
@@ -332,9 +358,9 @@ class Hand
 
   def display_mid_cards_section(suits)
     puts
+    puts Card::MID_CARD_GRAPHIC * card_count
     print_card_label_line(Card::MIDDLE_CARD_LABEL_GRAPHIC, suits)
     puts
-    puts Card::MID_CARD_GRAPHIC * card_count
     puts Card::MID_CARD_GRAPHIC * card_count
   end
 
