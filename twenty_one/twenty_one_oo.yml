@@ -1,17 +1,51 @@
+busted_message: 
+  With a hand total of %s, it looks like %s BUSTED! 
+
+congratulate_game_winner: |+
+  Looks like our overall winner is %s! Congratulations!
+
+congratulate_round_winner: |+
+
+  Congratulations %s! You won this round!
+
 draw_or_stay: |+
   Do you want to draw a card or stay your hand?
   Type 'stay' to stay your hand or 'draw' to draw a card.
 
   Which do you choose? [stay, draw] %s
 
+final_card_results: |+
+  
+  FINAL CARD RESULTS
+  
+game_stats: |+
+  The game so far:
+  %s has won %s rounds.
+  %s has won %s rounds.
+  There have been %s tie games.
+
+goodbye_message:
+  Thanks for playing! Goodbye!
+
 hand_display: |+
   
   %s's turn.
   Current hand total: %s
 
+participant_staying: |+
+  Looks like %s is staying their hand with a score of %s
+
+play_again: |
+  Would you like to play again?
+  Type 'y' for yes or 'n' for no.
+  What do you choose? %s
+
 play_multiple_rounds: |
   Do you want to play a single game, or play until either you or the dealer
   has won 3 games?
+
+tie_game: 
+  Noone wins, it's a tie!!
 
 welcome_message: |+
   Welcome to Twenty One!!

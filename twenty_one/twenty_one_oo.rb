@@ -1,46 +1,8 @@
-# frozen_string_literal: true
-
-# Twenty One
-#
-# Twenty-One is a card game consisting of a dealer and a player, where the participants
-#  try to get as close to 21 as possible without going over.
-#
-# Here is an overview of the game:
-# - Both participants are initially dealt 2 cards from a 52-card deck.
-# - The player takes the first turn, and can "hit" or "stay".
-# - If the player busts, he loses. If he stays, it's the dealer's turn.
-# - The dealer must hit until his cards add up to at least 17.
-# - If he busts, the player wins. If both player and dealer stays, then the highest total wins.
-# - If both totals are equal, then it's a tie, and nobody wins.
-#
-#
-# Nouns: card, game, dealer, player, participants, deck, total
-# Verbs: takes turn, hit, stay, busts
-#
-# Player
-# - hit
-# - stay
-# - busted?
-# - total
-# Dealer
-# - hit
-# - stay
-# - busted?
-# - total
-# - deal (should this be here, or in Deck?)
-# Participant
-# Deck
-# - deal (should this be here, or in Dealer?)
-# Card
-# Game
-# - start
-#
+# Twenty One Game -- Object Oriented Version
 
 require 'pry'
 require 'yaml'
 require 'abbrev'
-
-
 
 module Utils # requires abbrev
   PROMPT = ' => '
@@ -103,45 +65,82 @@ class TwentyOne
   BUST_THRESHOLD = 21
 
   def initialize
-    first_run = true
-    display_welcome if first_run
-    @points_to_win = choose_points_to_win
+    display_welcome
     @deck = Deck.new
     @player = Player.new
     @dealer = Dealer.new
+    @points_to_win = nil
     @rounds_played = 0
     @tie_games = 0
+    @round_winner = nil
   end
 
   def start
     loop do
-      deal_starting_hands
-      play_game until game_winner?
-      break
-      # player_takes_turn
-      # dealer_takes_turn
+      choose_points_to_win!
+      loop do
+        play_game_round
+        display_final_cards
+        determine_round_winner
+        round_winner? ? round_winner_updates! : tie_game_updates!
+        break if game_winner?
 
-      # show_initial_cards
-      # player_turn
-      # dealer_turn
-      # show_result
+        perform_new_round_procedures
+      end
+      congratulate_game_winner if game_winner?
+      play_again? ? reset_game! : break
     end
+    display_goodbye_message
   end
 
   private
 
   attr_accessor :deck, :player, :dealer, :rounds_played, :tie_games, :first_run,
-                :points_to_win
+                :points_to_win, :round_winner, :game_winner
 
-  def choose_points_to_win
+  def choose_points_to_win!
     print MESSAGES['play_multiple_rounds']
     print "Type 's' for single game or 'm' for multiple games #{PROMPT}"
-    get_validated_input(%w[s m]) == 's' ? 1 : 3
+    self.points_to_win = get_validated_input(%w[s m]) == 's' ? 1 : 3
   end
 
   def choose_to_stay_hand?
     print format(MESSAGES['draw_or_stay'], PROMPT)
     get_validated_input(%w[stay draw]) == 'stay'
+  end
+
+  def congratulate_game_winner
+    game_winner = [player, dealer].max_by(&:points)
+    clear_screen
+    puts format(MESSAGES['congratulate_game_winner'], game_winner.name)
+  end
+
+  def congratulate_round_winner
+    clear_screen
+    puts format(MESSAGES['congratulate_round_winner'], round_winner.name)
+  end
+
+  def determine_round_winner
+    if someone_busted?
+      self.round_winner = player.busted? ? dealer : player
+      return
+    end
+
+    self.round_winner =
+      case player.hand_score <=> dealer.hand_score
+      when -1 then dealer
+      when 1 then player
+      end
+  end
+
+  def display_busted_message(busted_participant)
+    name = busted_participant.name
+    hand_score = busted_participant.hand_score
+
+    clear_screen
+    busted_participant.show_hand
+    puts format(MESSAGES['busted_message'], hand_score, name)
+    pause_screen
   end
 
   def deal_card_to_participant(participant)
@@ -154,29 +153,81 @@ class TwentyOne
     participant.hand.display
   end
 
-  def display_turn_recap(participant)
-    clear_screen
-    puts 'Turn Recap'
-    puts
-    participant.show_hand
-    puts format(
-      MESSAGES['participant_staying'], participant.name, participant.hand_value
-    )
-      
-    pause_screen
-  end
-
   def deal_starting_hands
-    clear_screen
     deck.shuffle(hide_animation: false)
 
     2.times do
       [player, dealer].each do |participant|
         deal_card_to_participant(participant)
         puts
-        sleep (1.25)
+        sleep 1.25
       end
     end
+    pause_screen
+  end
+
+  def dealer_takes_turn
+    loop do
+      clear_screen
+
+      puts "Dealer's turn"
+      puts
+      dealer.show_hand
+      puts
+      sleep 1.25
+      break if dealer.should_stay_hand?(player.hand_score)
+
+      deal_card_to_participant(dealer)
+      sleep 1.25
+      break if dealer.busted?
+    end
+    dealer.busted? ? display_busted_message(dealer) : display_turn_recap(dealer)
+  end
+
+  def display_final_cards
+    clear_screen
+    puts MESSAGES['final_card_results']
+    dealer.show_hand(show_face_down_card: true)
+    puts "Score: #{dealer.hand_score}"
+    puts
+    player.show_hand
+    puts "Score: #{player.hand_score}"
+    puts
+    pause_screen
+  end
+
+  def display_game_stats
+    puts format(MESSAGES['game_stats'], player.name, player.points, dealer.name,
+                dealer.points, tie_games)
+  end
+
+  def display_goodbye_message
+    puts MESSAGES['goodbye_message']
+  end
+
+  def display_single_or_multiple_message
+    if playing_multiple_rounds?
+      puts "Starting round #{rounds_played}"
+    else
+      puts 'Playing Single Game'
+    end
+  end
+
+  def display_tie_game_message
+    clear_screen
+    puts MESSAGES['tie_game']
+  end
+
+  def display_turn_recap(participant)
+    clear_screen
+    puts 'Turn Recap'
+    puts
+    participant.show_hand
+    puts format(
+      MESSAGES['participant_staying'], participant.name, participant.hand_score
+    )
+
+    pause_screen
   end
 
   def display_welcome
@@ -189,23 +240,35 @@ class TwentyOne
     player.points >= points_to_win || dealer.points >= points_to_win
   end
 
-  def play_game
-    clear_screen
+  def perform_new_round_procedures(playing_again: false)
+    display_game_stats unless playing_again
+    reset_for_new_round!
+    pause_screen unless playing_again
+  end
+
+  def play_again?
+    print format(MESSAGES['play_again'], PROMPT)
+    get_validated_input(%w[yes no]) == 'yes'
+  end
+
+  def play_game_round
     self.rounds_played += 1
-    if playing_multiple_games? 
-      puts "Starting round #{rounds_played}"
-    else 
-      puts "Playing Single Game"
-    end
+    clear_screen
+    display_single_or_multiple_message
+    deal_starting_hands
     player_takes_turn
-    # dealer_takes_turn unless player.busted?
-    # dealer_takes_turn unless player.busted?
+    dealer_takes_turn unless player.busted?
+  end
+
+  def increment_rounds_played!
+    self.rounds_played += 1
   end
 
   def player_takes_turn
     loop do
+      clear_screen
       show_all_hands
-      puts format(MESSAGES['hand_display'], player.name, player.hand_value)
+      puts format(MESSAGES['hand_display'], player.name, player.hand_score)
       if choose_to_stay_hand?
         player.stay_hand!
         break
@@ -214,22 +277,50 @@ class TwentyOne
       sleep 1.25
       break if player.busted?
     end
-    display_turn_recap unless player.busted?
+    player.busted? ? display_busted_message(player) : display_turn_recap(player)
+    # display_turn_recap(player) unless player.busted?
   end
 
-  def playing_multiple_games?
+  def playing_multiple_rounds?
     points_to_win > 1
   end
 
-  def reset
-    self.first_run = false
+  def reset_for_new_round!
+    self.round_winner = nil
+    self.deck = Deck.new
+    player.hand.clear
+    dealer.hand.clear
+  end
+
+  def reset_game!
+    perform_new_round_procedures(playing_again: true)
     self.rounds_played = 0
-    self.tie_games = 0
+    player.points = 0
+    dealer.points = 0
+    clear_screen
+  end
+
+  def round_winner?
+    round_winner != nil
+  end
+
+  def round_winner_updates!
+    round_winner.points += 1
+    congratulate_round_winner if playing_multiple_rounds?
   end
 
   def show_all_hands
     dealer.show_hand
     player.show_hand
+  end
+
+  def someone_busted?
+    [player, dealer].any?(&:busted?)
+  end
+
+  def tie_game_updates!
+    self.tie_games += 1
+    display_tie_game_message
   end
 end
 
@@ -254,15 +345,16 @@ class Participant
   end
 
   def busted?
-    hand_value > TwentyOne::BUST_THRESHOLD
+    hand_score > TwentyOne::BUST_THRESHOLD
   end
 
   def show_hand(show_face_down_card: false)
-    hand.display(show_face_down_card: false)
+    puts "#{name}'s hand"
+    hand.display(show_face_down_card)
   end
 
-  def hand_value
-    hand.cards_value
+  def hand_score
+    hand.cards_total_value
   end
 
   private
@@ -272,7 +364,6 @@ class Participant
 end
 
 class Player < Participant
-
   private
 
   def assign_name
@@ -287,6 +378,12 @@ end
 
 class Dealer < Participant
   DEALER_NAMES = %w[Dealer].freeze
+  HIT_THRESHOLD = 17
+
+  def should_stay_hand?(player_score)
+    return false if hand_score < player_score
+    hand_score >= HIT_THRESHOLD
+  end
 
   private
 
@@ -343,12 +440,12 @@ class Card
   SUITS_EXPANDED = { '♥' => 'Hearts', '♠' => 'Spades', '♦' => 'Diamonds',
                      '♣' => 'Clubs' }.freeze
   FACE_VALUES = { 'J' => 10, 'Q' => 10, 'K' => 10, 'A' => 1 }.freeze
-  TOP_OF_CARD_GRAPHIC = "┏━━━━━━━━━┓"
+  TOP_OF_CARD_GRAPHIC = '┏━━━━━━━━━┓'
   UPPER_CARD_LABEL_GRAPHIC = ('┃' + '%-9.9s' + '┃')
-  MID_CARD_GRAPHIC = "┃         ┃"
+  MID_CARD_GRAPHIC = '┃         ┃'
   MIDDLE_CARD_LABEL_GRAPHIC = ('┃' + '%s'.center(10) + '┃')
   LOWER_CARD_LABEL_GRAPHIC = ('┃' + '%9.9s' + '┃')
-  BOTTOM_OF_CARD_GRAPHIC = "┗━━━━━━━━━┛"
+  BOTTOM_OF_CARD_GRAPHIC = '┗━━━━━━━━━┛'
 
   attr_reader :face, :suit, :value
   attr_accessor :face_down
@@ -370,8 +467,6 @@ class Card
 end
 
 class Hand
-  include Comparable
-
   def initialize
     @cards = []
   end
@@ -384,11 +479,20 @@ class Hand
     cards.count
   end
 
-  def cards_value
-    cards.map(&:value).sum
+  def cards_total_value
+    aces_count = cards.count { |card| card.face == 'A' }
+    hand_score = cards.map(&:value).sum
+    aces_count.times do |_|
+      hand_score += 10 if hand_score + 10 <= TwentyOne::BUST_THRESHOLD
+    end
+    hand_score
   end
 
-  def display(show_face_down_card: false)
+  def clear
+    self.cards = []
+  end
+
+  def display(show_face_down_card = false)
     suits = suits_list
     faces = faces_list
 
@@ -405,21 +509,9 @@ class Hand
     cards.empty?
   end
 
-  def remove_card(card)
-    cards.delete(card)
-  end
-
-  
-
-  # def [](index)
-  #   cards[index]
-  # end
-
-  def <=>(other)
-    cards_value <=> other.cards_value
-  end
-
   private
+
+  attr_accessor :cards
 
   def display_card_graphics(suits, faces)
     display_upper_cards_section(faces)
@@ -459,12 +551,7 @@ class Hand
   def suits_list
     cards.map(&:suit)
   end
-
-  attr_reader :cards
 end
 
-game = TwentyOne.new
-game.start
-pry.start
-
+TwentyOne.new.start
 
