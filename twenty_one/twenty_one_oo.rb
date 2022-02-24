@@ -1,10 +1,12 @@
+# frozen_string_literal: true
+
 # Twenty One Game -- Object Oriented Version
 
-require 'pry'
 require 'yaml'
 require 'abbrev'
 
-module Utils # requires abbrev
+module Utils
+  # requires abbrev
   PROMPT = ' => '
 
   def build_regexp_pattern(string_array, abbreviations)
@@ -16,16 +18,6 @@ module Utils # requires abbrev
 
   def display_input_prompt(message)
     print message + PROMPT
-  end
-
-  def display_thinking_animation(phrase, wait_time)
-    print phrase
-    5.times do
-      print '.'
-      sleep wait_time
-    end
-    puts
-    puts
   end
 
   def get_validated_input(valid_input)
@@ -160,7 +152,7 @@ class TwentyOne
       [player, dealer].each do |participant|
         deal_card_to_participant(participant)
         puts
-        sleep 1.25
+        delay_screen(1.25)
       end
     end
     pause_screen
@@ -168,20 +160,23 @@ class TwentyOne
 
   def dealer_takes_turn
     loop do
-      clear_screen
-
-      puts "Dealer's turn"
-      puts
-      dealer.show_hand
-      puts
-      sleep 1.25
+      display_dealer_hand
       break if dealer.should_stay_hand?(player.hand_score)
 
       deal_card_to_participant(dealer)
-      sleep 1.25
+      delay_screen(1.25)
       break if dealer.busted?
     end
     dealer.busted? ? display_busted_message(dealer) : display_turn_recap(dealer)
+  end
+
+  def display_dealer_hand
+    clear_screen
+    puts "Dealer's turn"
+    puts
+    dealer.show_hand
+    puts
+    delay_screen(1.25)
   end
 
   def display_final_cards
@@ -203,6 +198,12 @@ class TwentyOne
 
   def display_goodbye_message
     puts MESSAGES['goodbye_message']
+  end
+
+  def display_player_hand
+    clear_screen
+    show_all_hands
+    puts format(MESSAGES['hand_display'], player.name, player.hand_score)
   end
 
   def display_single_or_multiple_message
@@ -266,19 +267,16 @@ class TwentyOne
 
   def player_takes_turn
     loop do
-      clear_screen
-      show_all_hands
-      puts format(MESSAGES['hand_display'], player.name, player.hand_score)
+      display_player_hand
       if choose_to_stay_hand?
         player.stay_hand!
         break
       end
       deal_card_to_participant(player)
-      sleep 1.25
+      delay_screen(1.25)
       break if player.busted?
     end
     player.busted? ? display_busted_message(player) : display_turn_recap(player)
-    # display_turn_recap(player) unless player.busted?
   end
 
   def playing_multiple_rounds?
@@ -382,6 +380,7 @@ class Dealer < Participant
 
   def should_stay_hand?(player_score)
     return false if hand_score < player_score
+
     hand_score >= HIT_THRESHOLD
   end
 
@@ -393,6 +392,8 @@ class Dealer < Participant
 end
 
 class Deck
+  include Utils
+
   def initialize
     @cards = create_deck
   end
@@ -424,7 +425,7 @@ class Deck
     print 'Shuffling deck....'
     %w[| / - \\].cycle(3) do |piece|
       print piece
-      sleep 0.15
+      delay_screen(0.15)
       print "\b"
     end
     puts 'Ready to deal!'
@@ -554,4 +555,3 @@ class Hand
 end
 
 TwentyOne.new.start
-
